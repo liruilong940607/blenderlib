@@ -33,3 +33,12 @@ ${BLENDER_EXE} -b --python /tmp/blender_test.py --
 ```
 Note `-b` is for running the blender in background mode. Any python arguments can be put after `--` in the end.
 
+
+## Rendering
+
+```
+bash scripts/run.sh \
+  ./pylib/converter_alex.py \
+  ./data/forest_and_friends/Bear_cub_full_RM.blend \
+  --out_dir ./output2/ --light_env_dir ./data/hdri
+```
