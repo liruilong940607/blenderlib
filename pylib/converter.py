@@ -73,6 +73,72 @@ def setup_camera():
     return anchor, scene.camera
 
 
+def fix_animal_texture():
+    """
+    Fix forest animal texture (since it is not automatically set)
+    """
+    from utils import print_info
+    import os.path as osp
+    model_path = bpy.data.filepath
+    print (model_path)
+
+    bpy.ops.object.select_by_type(type="MESH")
+    mesh_obj = bpy.context.selected_objects[0]
+
+    dirname, basename = osp.split(model_path)
+    texture_path = osp.join(dirname, 'textures')
+    print_info('** Fixing forest animal texture')
+    print_info('Finding textures in', texture_path)
+
+    spl = basename.split('_')[:-1]
+    get_tex_type = lambda x: osp.splitext(x)[0][len(basename_match):].lower()
+    files_in_dir = os.listdir(texture_path)
+
+    texture_paths = {}
+    while len(texture_paths) == 0 and len(spl) > 0:
+        basename_match = '_'.join(spl) + '_'
+        texture_paths = {get_tex_type(x): osp.join(texture_path, x) for x in
+                    files_in_dir if x.startswith(basename_match)}
+        spl = spl[:-1]
+
+    print_info('Found', len(texture_paths), 'textures:', texture_paths)
+    assert 'color' in texture_paths.keys(), "Couldn't find color texture"
+
+    images = {}
+    for tname in texture_paths:
+        images[tname] = bpy.data.images.load(texture_paths[tname], check_existing=False)
+    del texture_paths
+
+    mat = mesh_obj.material_slots[0].material
+    mat.use_nodes = True
+    bsdf = mat.node_tree.nodes["Principled BSDF"]
+    tex_color_node = mat.node_tree.nodes.new('ShaderNodeTexImage')
+    tex_color_node.image = images['color']
+    mat.node_tree.links.new(bsdf.inputs['Base Color'], tex_color_node.outputs['Color'])
+
+    if 'normal' in images:
+        print_info('normal map found')
+        normal_map_node = mat.node_tree.nodes.new('ShaderNodeNormalMap')
+        mat.node_tree.links.new(bsdf.inputs['Normal'], normal_map_node.outputs['Normal'])
+        tex_normal_node = mat.node_tree.nodes.new('ShaderNodeTexImage')
+        tex_normal_node.image = images['normal']
+        mat.node_tree.links.new(normal_map_node.inputs['Color'], tex_normal_node.outputs['Color'])
+    else:
+        print_info('normal map NOT found')
+
+    if 'metall' in images:
+        print_info('metallic map found')
+        tex_metall_node = mat.node_tree.nodes.new('ShaderNodeTexImage')
+        tex_metall_node.image = images['metall']
+        mat.node_tree.links.new(bsdf.inputs['Metallic'], tex_metall_node.outputs['Color'])
+    else:
+        print_info('metallic map NOT found')
+
+    # Disable specular effects
+    bsdf.inputs['Specular'].default_value = 0.0
+    bsdf.inputs['Roughness'].default_value = 0.69
+
+
 def main():
     args = parse_args()
     obj_name = os.path.basename(os.path.splitext(bpy.data.filepath)[0])
@@ -82,10 +148,10 @@ def main():
     # global settings
     utils.setup_random_seed(42)
     utils.setup_render_engine_cycles(
-        use_gpu=args.use_gpu,
-        resolution_percentage=20,
+        use_gpu=args.use_gpu, # resolution_percentage=20,
     )
     utils.setup_hdri_lighting(hdri_path=args.hdri_path)
+    fix_animal_texture()
 
     # extract meta info
     pose_data, verts = process_object()
