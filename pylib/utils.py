@@ -1,4 +1,5 @@
 import bpy
+import sys
 import random
 import numpy as np
 
@@ -12,10 +13,10 @@ def setup_random_seed(seed: int):
     np.random.seed(seed)
     
 
-def setup_cuda_device(scene_name: str = "Scene"):
+def setup_cuda_device():
     preferences = bpy.context.preferences.addons["cycles"].preferences
     preferences.compute_device_type = "CUDA"
-    bpy.data.scenes[scene_name].cycles.device = "GPU"
+    bpy.context.scene.cycles.device = "GPU"
     # The following needs to be called to register preference update
     # See https://developer.blender.org/T71172
     for device_type in preferences.get_device_types(bpy.context):
@@ -37,7 +38,7 @@ def setup_render_engine_cycles(
     color_depth: int = 16,
     use_gpu: bool = False,
 ):
-    scene = bpy.data.scenes[scene_name]
+    scene = bpy.context.scene
     scene.render.engine = 'CYCLES'
 
     cycles = scene.cycles
@@ -80,9 +81,8 @@ def setup_render_engine_cycles(
 def setup_hdri_lighting(
     hdri_path: str, 
     strength: float = 1.0, 
-    scene_name: str = "Scene", 
 ):
-    scene = bpy.data.scenes[scene_name]
+    scene = bpy.context.scene
     world = scene.world
     world.use_nodes = True
     nodes = world.node_tree.nodes
@@ -93,3 +93,19 @@ def setup_hdri_lighting(
     bg_node = nodes['Background']
     bg_node.inputs["Strength"].default_value = strength
     links.new(env_node.outputs["Color"], bg_node.inputs["Color"])
+
+
+def get_intrin_extrin(camera):
+    render = bpy.context.scene.render
+    resolution_x = render.resolution_x * render.resolution_percentage / 100.0
+    resolution_y = render.resolution_y * render.resolution_percentage / 100.0
+    aspect_ratio = resolution_x / resolution_y
+
+    fx = 0.5 * resolution_x / np.tan(0.5 * camera.data.angle)
+    fy = 0.5 * resolution_x / np.tan(0.5 * camera.data.angle) * aspect_ratio
+    cx = 0.5 * resolution_x
+    cy = 0.5 * resolution_y
+
+    intrin = np.array([[fx, 0, cx], [0, fy, cy], [0, 0, 1]], dtype=np.float32)
+    extrin = np.array(camera.matrix_world.inverted())
+    return intrin, extrin

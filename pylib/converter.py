@@ -2,6 +2,7 @@ import bpy
 import os
 import sys
 import argparse
+import json
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(__file__))
@@ -24,13 +25,19 @@ def parse_args():
         "--hdri_path", 
         type=str, 
         default="./data/hdri/air_museum_playground_4k.hdr",
-        help="the hdri file path for lightning"
+        help="the hdri file path for lightning."
     )
     parser.add_argument(
         "--save_dir", 
         type=str, 
         default="./results/",
-        help="the hdri file path for lightning"
+        help="the output directory."
+    )
+    parser.add_argument(
+        "--n_cam", 
+        type=int, 
+        default=10,
+        help="number of static cameras."
     )
     args = parser.parse_args(argv)
     return args
@@ -47,8 +54,8 @@ def process_object():
     return pose_data, verts
 
 
-def setup_camera(scene_name: str = "Scene"):
-    scene = bpy.data.scenes[scene_name]
+def setup_camera():
+    scene = bpy.context.scene
     
     bpy.ops.object.empty_add()
     anchor = bpy.context.active_object
@@ -68,7 +75,6 @@ def setup_camera(scene_name: str = "Scene"):
 
 def main():
     args = parse_args()
-    
     obj_name = os.path.basename(os.path.splitext(bpy.data.filepath)[0])
     save_dir = os.path.join(args.save_dir, obj_name)
     os.makedirs(save_dir, exist_ok=True)
@@ -77,23 +83,52 @@ def main():
     utils.setup_random_seed(42)
     utils.setup_render_engine_cycles(
         use_gpu=args.use_gpu,
-        # resolution_percentage=20,
+        resolution_percentage=20,
     )
     utils.setup_hdri_lighting(hdri_path=args.hdri_path)
 
     # extract meta info
     pose_data, verts = process_object()
 
-    # render images
+    # setup cameras and anchor to be tracked to by the camera
     anchor, camera = setup_camera()
     camera.location = [0., 2., 0.]
     anchor.location = verts.reshape(-1, 3).mean(axis=0)
-    for index in range(5):
-        anchor.rotation_euler = np.random.random(3) * 2 * np.pi        
-        bpy.context.scene.render.filepath = (
-            os.path.join(save_dir, "%08d.png" % index)
-        )
-        bpy.ops.render.render(write_still=True)
+    
+    # rotate the anchor and render
+    rotation_eulers = np.random.random((args.n_cam, 3)) * 2 * np.pi
+    camera_data = {}
+    for frame_idx in range(1):
+        frame_id = "%08d.png" % frame_idx
+        for cam_idx, euler in enumerate(rotation_eulers):
+            camera_id = "cam_%03d" % cam_idx
+            anchor.rotation_euler = euler    
+            image_path = os.path.join(
+                save_dir, 
+                "image", 
+                camera_id, 
+                frame_id,
+            )
+            os.makedirs(os.path.dirname(image_path), exist_ok=True)
+            bpy.context.scene.render.filepath = image_path
+            bpy.ops.render.render(write_still=True)
+
+            # NOTE: camera matrix must be written AFTER render 
+            # because the view layer is updated lazily
+            intrin, extrin = utils.get_intrin_extrin(camera)
+            camera_data[camera_id] = {
+                "intrin": intrin.tolist(), "extrin": extrin.tolist()
+            }
+
+    with open(os.path.join(save_dir, "camera.json"), "w") as fp:
+        json.dump(camera_data, fp)
+
+    np.savez(
+        os.path.join(save_dir, "meta_data.npz"), 
+        verts=verts, 
+        **pose_data
+    )
+
 
 
 if __name__ == "__main__":
