@@ -42,3 +42,8 @@ bash scripts/run.sh \
   ./data/forest_and_friends/Bear_cub_full_RM.blend \
   --out_dir ./output2/ --light_env_dir ./data/hdri
 ```
+
+
+```
+bash scripts/run.sh pylib/converter.py ./data/forest_and_friends/Bear_cub_full_IP.blend --hdri_path=./data/hdri/air_museum_playground_4k.hdr
+```
