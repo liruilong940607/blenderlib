@@ -1,4 +1,5 @@
 import bpy
+import bmesh
 import numpy as np
 
 
@@ -86,11 +87,17 @@ def extract_verts(armature, mesh):
     verts = []
     for frame_id in range(frame_start, frame_end + 1):
         bpy.context.scene.frame_set(frame_id)
-        verts.append([
-            (mesh.matrix_world @ v.co) for v in mesh.data.vertices
-        ])
+        depsgraph = bpy.context.evaluated_depsgraph_get()
+        bm = bmesh.new()
+        bm.from_object(mesh, depsgraph)
+        bm.verts.ensure_lookup_table()
+        verts.append([(mesh.matrix_world @ v.co) for v in bm.verts])
     verts = np.array(verts)
 
     # reset the frame 
     bpy.context.scene.frame_set(init_frame_id)
+    return verts
+
+def extract_rest_verts(mesh):
+    verts = np.array([(mesh.matrix_world @ v.co) for v in mesh.data.vertices])
     return verts

@@ -45,5 +45,5 @@ bash scripts/run.sh \
 
 
 ```
-bash scripts/run.sh pylib/converter.py ./data/forest_and_friends/Bear_cub_full_IP.blend --hdri_path=./data/hdri/air_museum_playground_4k.hdr
+bash scripts/run.sh pylib/converter.py $HOME/data/forest_and_friends/Bear_cub_full_IP.blend --hdri_path=$HOME/data/hdri/air_museum_playground_4k.hdr
 ```

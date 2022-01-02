@@ -51,7 +51,8 @@ def process_object():
     bpy.ops.object.select_by_type(type="MESH")
     mesh_obj = bpy.context.selected_objects[0]
     verts = dynamic.extract_verts(armature_obj, mesh_obj)
-    return pose_data, verts
+    rest_verts = dynamic.extract_rest_verts(mesh_obj)
+    return pose_data, verts, rest_verts
 
 
 def setup_camera():
@@ -154,7 +155,7 @@ def main():
     fix_animal_texture()
 
     # extract meta info
-    pose_data, verts = process_object()
+    pose_data, verts, rest_verts = process_object()
 
     # setup cameras and anchor to be tracked to by the camera
     anchor, camera = setup_camera()
@@ -168,7 +169,7 @@ def main():
     bpy.ops.object.select_by_type(type="ARMATURE")
     armature_obj = bpy.context.selected_objects[0]
     frame_start = int(armature_obj.animation_data.action.frame_range[0])
-    frame_end =  10 # int(armature_obj.animation_data.action.frame_range[-1])
+    frame_end = 10 # int(armature_obj.animation_data.action.frame_range[-1])
     
     for frame_idx in range(frame_start, frame_end + 1):
         bpy.context.scene.frame_set(frame_idx)
@@ -188,7 +189,7 @@ def main():
 
             # NOTE: camera matrix must be written AFTER render 
             # because the view layer is updated lazily
-            intrin, extrin = utils.get_intrin_extrin(camera)
+            intrin, extrin = utils.get_intrin_extrin(camera, opencv_format=True)
             camera_data[camera_id] = {
                 "intrin": intrin.tolist(), "extrin": extrin.tolist()
             }
@@ -199,6 +200,7 @@ def main():
     np.savez(
         os.path.join(save_dir, "meta_data.npz"), 
         verts=verts, 
+        rest_verts=rest_verts,
         **pose_data
     )
 
