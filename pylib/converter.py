@@ -46,13 +46,16 @@ def parse_args():
 def process_object():
     bpy.ops.object.select_by_type(type="ARMATURE")
     armature_obj = bpy.context.selected_objects[0]
-    pose_data = dynamic.extract_joints(armature_obj)
-
     bpy.ops.object.select_by_type(type="MESH")
     mesh_obj = bpy.context.selected_objects[0]
+    
+    pose_data = dynamic.extract_joints(armature_obj)
+
     verts = dynamic.extract_verts(armature_obj, mesh_obj)
     rest_verts = dynamic.extract_rest_verts(mesh_obj)
-    return pose_data, verts, rest_verts
+
+    weights = dynamic.extract_skinning_weights(armature_obj, mesh_obj)
+    return pose_data, verts, rest_verts, weights
 
 
 def setup_camera():
@@ -155,7 +158,7 @@ def main():
     fix_animal_texture()
 
     # extract meta info
-    pose_data, verts, rest_verts = process_object()
+    pose_data, verts, rest_verts, weights = process_object()
 
     # setup cameras and anchor to be tracked to by the camera
     anchor, camera = setup_camera()
@@ -202,6 +205,7 @@ def main():
         os.path.join(save_dir, "meta_data.npz"), 
         verts=verts, 
         rest_verts=rest_verts,
+        weights=weights,
         **pose_data
     )
 

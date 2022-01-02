@@ -101,3 +101,25 @@ def extract_verts(armature, mesh):
 def extract_rest_verts(mesh):
     verts = np.array([(mesh.matrix_world @ v.co) for v in mesh.data.vertices])
     return verts
+
+
+def extract_skinning_weights(armature, mesh, normalize=True):
+    n_verts = len(mesh.data.vertices)
+    n_bones = len(armature.data.bones)
+    
+    vg_names = [vg.name for vg in mesh.vertex_groups]
+    bone_names = [bone.name for bone in armature.data.bones]
+    vg_to_bone_map = [
+        bone_names.index(vg_name) if vg_name in bone_names else None
+        for vg_name in vg_names
+    ]
+
+    weights = np.zeros((n_verts, n_bones), dtype=np.float32)
+    for i in range(n_verts):
+        for grp in mesh.data.vertices[i].groups:
+            bone_id = vg_to_bone_map[grp.group]
+            if bone_id is not None:
+                weights[i, bone_id] = grp.weight
+    if normalize:
+        weights = weights / weights.sum(axis=1, keepdims=True)
+    return weights
