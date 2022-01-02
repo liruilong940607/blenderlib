@@ -1,4 +1,4 @@
-import bpy
+import bpy  # type: ignore
 import sys
 import random
 import numpy as np

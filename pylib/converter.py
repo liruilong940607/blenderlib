@@ -1,4 +1,4 @@
-import bpy
+import bpy # type: ignore
 import os
 import sys
 import argparse

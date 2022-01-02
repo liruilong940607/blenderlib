@@ -1,5 +1,5 @@
-import bpy
-import bmesh
+import bpy  # type: ignore
+import bmesh  # type: ignore
 import numpy as np
 
 
