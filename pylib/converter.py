@@ -36,7 +36,7 @@ def parse_args():
     parser.add_argument(
         "--n_cam", 
         type=int, 
-        default=3,
+        default=100,
         help="number of static cameras."
     )
     args = parser.parse_args(argv)
@@ -164,12 +164,13 @@ def main():
     
     # rotate the anchor and render
     rotation_eulers = np.random.random((args.n_cam, 3)) * 2 * np.pi
+    rotation_eulers[:, 1] *= 0
     camera_data = {}
 
     bpy.ops.object.select_by_type(type="ARMATURE")
     armature_obj = bpy.context.selected_objects[0]
     frame_start = int(armature_obj.animation_data.action.frame_range[0])
-    frame_end = 10 # int(armature_obj.animation_data.action.frame_range[-1])
+    frame_end = int(armature_obj.animation_data.action.frame_range[-1])
     
     for frame_idx in range(frame_start, frame_end + 1):
         bpy.context.scene.frame_set(frame_idx)
