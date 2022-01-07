@@ -152,9 +152,9 @@ def main():
     # global settings
     utils.setup_random_seed(42)
     utils.setup_render_engine_cycles(
-        use_gpu=args.use_gpu, # resolution_percentage=20,
+        use_gpu=args.use_gpu, n_samples=512, # resolution_percentage=20,
     )
-    utils.setup_hdri_lighting(hdri_path=args.hdri_path)
+    utils.setup_hdri_lighting(hdri_path=args.hdri_path, strength=1.8)
     fix_animal_texture()
 
     # extract meta info
@@ -166,8 +166,11 @@ def main():
     anchor.location = verts.reshape(-1, 3).mean(axis=0)
     
     # rotate the anchor and render
-    rotation_eulers = np.random.random((args.n_cam, 3)) * 2 * np.pi
-    rotation_eulers[:, 1] *= 0
+    rotation_eulers = np.concatenate([
+        np.arcsin(np.random.uniform(low=-0.8, high=0.8, size=(args.n_cam, 1))),  # x
+        np.zeros((args.n_cam, 1)),  # y
+        np.random.random((args.n_cam, 1)) * 2 * np.pi,  # z
+    ], axis=1) 
     camera_data = {}
 
     bpy.ops.object.select_by_type(type="ARMATURE")
