@@ -96,11 +96,12 @@ def extract_verts(armature, mesh):
 
     # reset the frame 
     bpy.context.scene.frame_set(init_frame_id)
-    return verts
+    return verts.astype(np.float32)
 
 def extract_rest_verts(mesh):
     verts = np.array([(mesh.matrix_world @ v.co) for v in mesh.data.vertices])
-    return verts
+    faces = np.array([mesh.data.polygons[i].vertices for i in range(len(mesh.data.polygons))])
+    return verts.astype(np.float32), faces.astype(np.uint32)
 
 
 def extract_skinning_weights(armature, mesh, normalize=True):

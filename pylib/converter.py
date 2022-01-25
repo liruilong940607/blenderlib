@@ -1,4 +1,5 @@
 import bpy # type: ignore
+import bmesh # type: ignore
 import os
 import sys
 import argparse
@@ -24,20 +25,32 @@ def parse_args():
     parser.add_argument(
         "--hdri_path", 
         type=str, 
-        default="./data/hdri/air_museum_playground_4k.hdr",
+        default=None,
         help="the hdri file path for lightning."
     )
     parser.add_argument(
         "--save_dir", 
         type=str, 
-        default="./results/",
+        default=None,
         help="the output directory."
     )
     parser.add_argument(
         "--n_cam", 
         type=int, 
-        default=100,
+        default=50,
         help="number of static cameras."
+    )
+    parser.add_argument(
+        "--action_id", 
+        type=int, 
+        default=None,
+        help="index of the action to be rendered."
+    )
+    parser.add_argument(
+        "--cam_dist", 
+        type=float, 
+        default=2.0,
+        help="Distance factor between the camera and the object."
     )
     args = parser.parse_args(argv)
     return args
@@ -48,14 +61,23 @@ def process_object():
     armature_obj = bpy.context.selected_objects[0]
     bpy.ops.object.select_by_type(type="MESH")
     mesh_obj = bpy.context.selected_objects[0]
-    
+
+    # Triangulate the mesh
+    bpy.context.view_layer.objects.active = mesh_obj
+    bpy.ops.object.mode_set(mode="EDIT")
+    mesh = mesh_obj.data
+    bm = bmesh.from_edit_mesh(mesh)
+    bmesh.ops.triangulate(bm, faces=bm.faces[:])
+    bmesh.update_edit_mesh(mesh, True)
+    bpy.ops.object.mode_set(mode="OBJECT")
+
     pose_data = dynamic.extract_joints(armature_obj)
 
     verts = dynamic.extract_verts(armature_obj, mesh_obj)
-    rest_verts = dynamic.extract_rest_verts(mesh_obj)
+    rest_verts, faces = dynamic.extract_rest_verts(mesh_obj)
 
     weights = dynamic.extract_skinning_weights(armature_obj, mesh_obj)
-    return pose_data, verts, rest_verts, weights
+    return pose_data, verts, rest_verts, weights, faces
 
 
 def setup_camera():
@@ -146,71 +168,112 @@ def fix_animal_texture():
 def main():
     args = parse_args()
     obj_name = os.path.basename(os.path.splitext(bpy.data.filepath)[0])
-    save_dir = os.path.join(args.save_dir, obj_name)
-    os.makedirs(save_dir, exist_ok=True)
+    
+    if args.action_id is not None:
+        # os.environ["CUDA_VISIBLE_DEVICES"]="%d" % (args.action_id % 10)
+        os.environ["CUDA_VISIBLE_DEVICES"]="%d" % (4 + args.action_id % 6)
 
     # global settings
     utils.setup_random_seed(42)
-    utils.setup_render_engine_cycles(
-        use_gpu=args.use_gpu, n_samples=512, # resolution_percentage=20,
+    utils.setup_render_engine_eevee(
+        use_gpu=args.use_gpu, resolution=800, #resolution_percentage=20,
     )
-    utils.setup_hdri_lighting(hdri_path=args.hdri_path, strength=1.8)
+    if args.hdri_path is not None:
+        utils.setup_hdri_lighting(hdri_path=args.hdri_path, strength=1.8)
+    else:
+        bpy.context.scene.world.light_settings.use_ambient_occlusion = False
+        utils.setup_hdri_lighting(hdri_path=None, strength=5.0)
     fix_animal_texture()
 
-    # extract meta info
-    pose_data, verts, rest_verts, weights = process_object()
+    action_names = sorted(list(bpy.data.actions.keys()))
+    if args.action_id is not None:
+        if args.action_id >= len(action_names):
+            print ("action id %d is out of range %d" % (args.action_id, len(action_names)))
+            return
+        action_names = [action_names[args.action_id]]
 
-    # setup cameras and anchor to be tracked to by the camera
-    anchor, camera = setup_camera()
-    camera.location = [0., 2., 0.]
-    anchor.location = verts.reshape(-1, 3).mean(axis=0)
-    
-    # rotate the anchor and render
-    rotation_eulers = np.concatenate([
-        np.arcsin(np.random.uniform(low=-0.8, high=0.8, size=(args.n_cam, 1))),  # x
-        np.zeros((args.n_cam, 1)),  # y
-        np.random.random((args.n_cam, 1)) * 2 * np.pi,  # z
-    ], axis=1) 
-    camera_data = {}
+    # for loop on all actions
+    for action_name in action_names:
+        action = bpy.data.actions[action_name]
 
-    bpy.ops.object.select_by_type(type="ARMATURE")
-    armature_obj = bpy.context.selected_objects[0]
-    frame_start = int(armature_obj.animation_data.action.frame_range[0])
-    frame_end = int(armature_obj.animation_data.action.frame_range[-1])
-    
-    for frame_idx in range(frame_start, frame_end + 1):
-        bpy.context.scene.frame_set(frame_idx)
-        frame_id = "%08d.png" % frame_idx
-        for cam_idx, euler in enumerate(rotation_eulers):
-            camera_id = "cam_%03d" % cam_idx
-            anchor.rotation_euler = euler    
-            image_path = os.path.join(
-                save_dir, 
-                "image", 
-                camera_id, 
-                frame_id,
-            )
-            os.makedirs(os.path.dirname(image_path), exist_ok=True)
-            bpy.context.scene.render.filepath = image_path
-            bpy.ops.render.render(write_still=True)
+        save_dir = os.path.join(args.save_dir, obj_name, action_name)
+        os.makedirs(save_dir, exist_ok=True)
 
-            # NOTE: camera matrix must be written AFTER render 
-            # because the view layer is updated lazily
-            intrin, extrin = utils.get_intrin_extrin(camera, opencv_format=True)
-            camera_data[camera_id] = {
-                "intrin": intrin.tolist(), "extrin": extrin.tolist()
-            }
+        # if os.path.exists(
+        #     os.path.join(save_dir, "meta_data.npz")
+        # ):
+        #     continue
 
-    with open(os.path.join(save_dir, "camera.json"), "w") as fp:
-        json.dump(camera_data, fp)
+        bpy.ops.object.select_by_type(type="ARMATURE")
+        armature_obj = bpy.context.selected_objects[0]
+        armature_obj.animation_data.action = action
 
-    np.savez(
-        os.path.join(save_dir, "meta_data.npz"), 
-        verts=verts, 
-        rest_verts=rest_verts,
-        weights=weights,
-        **pose_data
-    )
+        # extract meta info
+        pose_data, verts, rest_verts, weights, faces = process_object()
+
+        # boudning box of the action region
+        bb_min = verts.reshape(-1, 3).min(axis=0)
+        bb_max = verts.reshape(-1, 3).max(axis=0)
+        center = (bb_max + bb_min) / 2.0
+        scale = (np.prod(bb_max - bb_min)) ** (1. / 3.)
+
+        # setup cameras and anchor to be tracked to by the camera
+        anchor, camera = setup_camera()
+        # camera.location = [0., 2.0 * scale, 0.]
+        camera.location = [0., args.cam_dist * scale, 0.]
+        anchor.location = center
+
+        # rotate the anchor and render
+        rotation_eulers = np.concatenate([
+            np.arcsin(np.random.uniform(low=-0.8, high=0.8, size=(args.n_cam, 1))),  # x
+            np.zeros((args.n_cam, 1)),  # y
+            np.random.random((args.n_cam, 1)) * 2 * np.pi,  # z
+        ], axis=1) 
+
+        frame_start = int(armature_obj.animation_data.action.frame_range[0])
+        frame_end = int(armature_obj.animation_data.action.frame_range[-1])
+
+        camera_data = {}        
+        for frame_id in range(frame_start, frame_end + 1):
+            bpy.context.scene.frame_set(frame_id)
+
+            bpy.ops.object.select_by_type(type="ARMATURE")
+            armature_obj = bpy.context.selected_objects[0]
+            root_bone_pos = armature_obj.matrix_world @ armature_obj.pose.bones[2].head
+            anchor.location = root_bone_pos
+
+            camera_data[frame_id] = {}
+            for cam_idx, euler in enumerate(rotation_eulers):
+                camera_id = "cam_%03d" % cam_idx
+                anchor.rotation_euler = euler    
+                image_path = os.path.join(
+                    save_dir, 
+                    "image", 
+                    camera_id, 
+                    "%08d.png" % frame_id,
+                )
+                os.makedirs(os.path.dirname(image_path), exist_ok=True)
+                bpy.context.scene.render.filepath = image_path
+                bpy.ops.render.render(write_still=True)
+
+                # NOTE: camera matrix must be written AFTER render 
+                # because the view layer is updated lazily
+                intrin, extrin = utils.get_intrin_extrin(camera, opencv_format=True)
+                camera_data[frame_id][camera_id] = {
+                    "intrin": intrin.tolist(), "extrin": extrin.tolist()
+                }
+
+        with open(os.path.join(save_dir, "camera.json"), "w") as fp:
+            json.dump(camera_data, fp)
+
+        np.savez(
+            os.path.join(save_dir, "meta_data.npz"), 
+            verts=verts, 
+            rest_verts=rest_verts,
+            faces=faces,
+            weights=weights,
+            **pose_data
+        )
 
 
 
