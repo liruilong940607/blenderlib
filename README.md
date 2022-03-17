@@ -61,11 +61,11 @@ Through setting the hdri file, it switchs to the Cycles engine with ray tracying
 # [Wolf_cub_full_RM_2, Hare_male_full_RM]
 SUBJECT_ID=Hare_male_full_RM
 NUM_THREADS=5
-printf '%s\n' {1..70} | xargs -P$NUM_THREADS -I {} \
+printf '%s\n' {1..100} | xargs -P$NUM_THREADS -I {} \
 bash scripts/run.sh \
     scripts/export_renderings.py \
     ./data/forest_and_friends/${SUBJECT_ID}.blend \
-    --save_dir "./results/" \
+    --save_dir "./results_shading/" \
     --use_gpu \
     --n_cam 20 \
     --cam_dist 3.0 \
