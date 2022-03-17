@@ -2,48 +2,101 @@
 
 This is a blender toolbox for personal uses.
 
-## Setup (Mac OS)
-
-Installation can be done on Steam plantform.
-
-#### Where are the files?
+## Install 3rd-party python packages
 
 ```
-BLENDER_PKG=/Users/ruilongli/Library/Application\ Support/Steam/steamapps/common/Blender/Blender.app
-BLENDER_EXE=${BLENDER_PKG}/Contents/MacOS/Blender
-BLENDER_PKG_PY=${BLENDER_PKG}/Contents/Resources/2.93/python/
-BLENDER_PY=${BLENDER_PKG_PY}/bin/python3.9
-BLENDER_PIP=${BLENDER_PKG_PY}/bin/pip3.9
+# this script will set up three alias for blender:
+# `blender`,  `blender_python`, `blender_pip`
+source scripts/setup_paths.sh
+
+# install whatever you want through pip
+blender_python -m ensurepip
+blender_python -m pip install pip
+blender_pip install numpy scipy
 ```
 
-#### Install 3rd-party python packages
+## Ensure blender is installed
 
 ```
-${BLENDER_PY} -m ensurepip
-${BLENDER_PY} -m pip install pip
-${BLENDER_PIP} install numpy scipy
-```
+# this script will set up three alias for blender:
+# `blender`,  `blender_python`, `blender_pip`
+source scripts/setup_paths.sh
 
-#### Run blender python script
-
-```
 touch /tmp/blender_test.py
-echo "import numpy; import scipy; print('done')" > /tmp/blender_test.py
-${BLENDER_EXE} -b --python /tmp/blender_test.py --  
+echo "print('success')" > /tmp/blender_test.py
+blender -b --python /tmp/blender_test.py --  
 ```
 Note `-b` is for running the blender in background mode. Any python arguments can be put after `--` in the end.
 
 
-## Rendering
+## Rendering without Shading
 
+Here we render the subject with uniform lighting and disable any shading effects (by using EEVEE engine w/o ambiant occlusion). To render all actions for the subject with multi-threads:
 ```
+# Wolf
+NUM_THREADS=5
+printf '%s\n' {1..70} | xargs -P$NUM_THREADS -I {} \
 bash scripts/run.sh \
-  ./pylib/converter_alex.py \
-  ./data/forest_and_friends/Bear_cub_full_RM.blend \
-  --out_dir ./output2/ --light_env_dir ./data/hdri
+    scripts/export_renderings.py \
+    ./data/forest_and_friends/Wolf_cub_full_RM_2.blend \
+    --save_dir "./results/" \
+    --use_gpu \
+    --n_cam 20 \
+    --cam_dist 3.0 \
+    --action_id {}
+
+bash scripts/run.sh \
+    scripts/export_animation.py \
+    ./data/forest_and_friends/Wolf_cub_full_RM_2.blend \
+    --save_dir "./results/"
+
+# Hare
+NUM_THREADS=5
+printf '%s\n' {1..50} | xargs -P$NUM_THREADS -I {} \
+bash scripts/run.sh \
+    pylib/converter.py \
+    ./data/forest_and_friends/Hare_male_full_RM.blend \
+    --save_dir "./results/" \
+    --use_gpu \
+    --n_cam 20 \
+    --cam_dist 3.0 \
+    --action_id {}
+  
+bash scripts/run.sh \
+    scripts/export_animation.py \
+    ./data/forest_and_friends/Hare_male_full_RM.blend \
+    --save_dir "./results/"
 ```
+Note: This does not seem to support headless rendering!!
 
 
+## Rendering with Shading
+
+Through setting the hdri file, it switchs to the Cycles engine with ray tracying to do the rendering. The lighting is more nature and shading effects are enabled. To render all actions for the subject with multi-threads:
 ```
-bash scripts/run.sh pylib/converter.py $HOME/data/forest_and_friends/Bear_cub_full_IP.blend --hdri_path=$HOME/data/hdri/air_museum_playground_4k.hdr
+# Wolf
+NUM_THREADS=5
+printf '%s\n' {1..70} | xargs -P$NUM_THREADS -I {} \
+bash scripts/run.sh \
+    scripts/export_renderings.py \
+    ./data/forest_and_friends/Wolf_cub_full_RM_2.blend \
+    --save_dir "./results/" \
+    --use_gpu \
+    --n_cam 20 \
+    --cam_dist 3.0 \
+    --action_id {} \
+    --hdri_path ./data/hdri/air_museum_playground_4k.hdr
+
+# Hare
+NUM_THREADS=5
+printf '%s\n' {1..50} | xargs -P$NUM_THREADS -I {} \
+bash scripts/run.sh \
+    pylib/converter.py \
+    ./data/forest_and_friends/Hare_male_full_RM.blend \
+    --save_dir "./results/" \
+    --use_gpu \
+    --n_cam 20 \
+    --cam_dist 3.0 \
+    --action_id {} \
+    --hdri_path ./data/hdri/air_museum_playground_4k.hdr
 ```

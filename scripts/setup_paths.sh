@@ -3,17 +3,26 @@
 
 shopt -s expand_aliases
 
-# BLENDER_PKG=\
-# "/home/ruilongli/installation/blender-2.93.0-stable+blender-v293-release.84da05a8b806-linux.x86_64-release/"
-# alias blender="${BLENDER_PKG}/blender"
-
-# BLENDER_PKG_PY="${BLENDER_PKG}/2.93/python/"
-
-BLENDER_PKG=\
-"/Users/ruilongli/Library/Application\ Support/Steam/steamapps/common/Blender/Blender.app"
-alias blender="${BLENDER_PKG}/Contents/MacOS/Blender"
-
-BLENDER_PKG_PY="${BLENDER_PKG}/Contents/Resources/2.93/python/"
+case "$(uname -s)" in
+   Darwin)
+      echo 'Mac OS X'
+      BLENDER_PKG="/Users/ruilongli/Library/Application\ Support/Steam/steamapps/common/Blender/Blender.app"
+      alias blender="${BLENDER_PKG}/Contents/MacOS/Blender"
+      BLENDER_PKG_PY="${BLENDER_PKG}/Contents/Resources/2.93/python/"
+      ;;
+   Linux)
+      echo 'Linux'
+      BLENDER_PKG="/home/ruilongli/installation/blender-2.93.0-stable+blender-v293-release.84da05a8b806-linux.x86_64-release/"
+      alias blender="${BLENDER_PKG}/blender"
+      BLENDER_PKG_PY="${BLENDER_PKG}/2.93/python/"
+      ;;
+   CYGWIN*|MINGW32*|MSYS*|MINGW*)
+      echo 'MS Windows (not supported yet)'
+      ;;
+   *)
+      echo 'Other OS (not supported yet)' 
+      ;;
+esac
 
 alias blender_python="${BLENDER_PKG_PY}/bin/python3.9"
 alias blender_pip="${BLENDER_PKG_PY}/bin/pip3.9"
