@@ -1,4 +1,4 @@
-import bpy
+import bpy  # type: ignore
 import sys
 import random
 import numpy as np
@@ -29,9 +29,33 @@ def setup_cuda_device():
             )
         )
 
+
+def setup_render_engine_eevee(
+    resolution: int = 512,
+    resolution_percentage: float = 100.0,
+    color_depth: int = 16,
+    use_gpu: bool = False,
+):
+    scene = bpy.context.scene
+    scene.render.engine = "BLENDER_EEVEE"
+
+    scene.render.resolution_x = resolution
+    scene.render.resolution_y = resolution
+    scene.render.resolution_percentage = resolution_percentage
+    scene.render.use_file_extension = True
+    scene.render.image_settings.file_format = "PNG"
+    scene.render.image_settings.color_depth = str(color_depth)
+    scene.render.film_transparent = True
+
+    if use_gpu:
+        setup_cuda_device()
+
+    world = bpy.data.worlds["World"]
+    world.use_nodes = True
+    scene.use_nodes = True
+
         
 def setup_render_engine_cycles(
-    scene_name: str = "Scene", 
     n_samples: int = 256,
     resolution: int = 512,
     resolution_percentage: float = 100.0,
@@ -58,7 +82,7 @@ def setup_render_engine_cycles(
     cycles.sample_clamp_indirect = 10.0
 
     if use_gpu:
-        setup_cuda_device(scene_name=scene_name)
+        setup_cuda_device()
 
     world.use_nodes = True
     scene.use_nodes = True
@@ -79,7 +103,7 @@ def setup_render_engine_cycles(
 
 
 def setup_hdri_lighting(
-    hdri_path: str, 
+    hdri_path: str = None, 
     strength: float = 1.0, 
 ):
     scene = bpy.context.scene
@@ -87,15 +111,16 @@ def setup_hdri_lighting(
     world.use_nodes = True
     nodes = world.node_tree.nodes
     links = world.node_tree.links
-    assert scene.render.engine == "CYCLES"
-    env_node = nodes.new("ShaderNodeTexEnvironment")
-    env_node.image = bpy.data.images.load(hdri_path, check_existing=True)
     bg_node = nodes['Background']
     bg_node.inputs["Strength"].default_value = strength
-    links.new(env_node.outputs["Color"], bg_node.inputs["Color"])
+    if hdri_path is not None:
+        assert scene.render.engine == "CYCLES"
+        env_node = nodes.new("ShaderNodeTexEnvironment")
+        env_node.image = bpy.data.images.load(hdri_path, check_existing=True)
+        links.new(env_node.outputs["Color"], bg_node.inputs["Color"])
 
 
-def get_intrin_extrin(camera):
+def get_intrin_extrin(camera, opencv_format=False):
     render = bpy.context.scene.render
     resolution_x = render.resolution_x * render.resolution_percentage / 100.0
     resolution_y = render.resolution_y * render.resolution_percentage / 100.0
@@ -108,4 +133,12 @@ def get_intrin_extrin(camera):
 
     intrin = np.array([[fx, 0, cx], [0, fy, cy], [0, 0, 1]], dtype=np.float32)
     extrin = np.array(camera.matrix_world.inverted())
+    if opencv_format:
+        # camera system in blender and opencv is different.
+        # see: https://stackoverflow.com/questions/64977993/applying-opencv-pose-estimation-to-blender-camera
+        mat = np.array(
+            [[1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1]], 
+            dtype=extrin.dtype
+        )
+        extrin = mat @ extrin
     return intrin, extrin
