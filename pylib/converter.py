@@ -74,10 +74,17 @@ def process_object():
     pose_data = dynamic.extract_joints(armature_obj)
 
     verts = dynamic.extract_verts(armature_obj, mesh_obj)
+<<<<<<< HEAD
     rest_verts, faces, verts_uvs, faces_uvs = dynamic.extract_rest_verts(mesh_obj)
 
     weights = dynamic.extract_skinning_weights(armature_obj, mesh_obj)
     return pose_data, verts, rest_verts, weights, faces, verts_uvs, faces_uvs
+=======
+    rest_verts, faces = dynamic.extract_rest_verts(mesh_obj)
+
+    weights = dynamic.extract_skinning_weights(armature_obj, mesh_obj)
+    return pose_data, verts, rest_verts, weights, faces
+>>>>>>> 7b1d01fb72862b24525c88bd6d4f6d04d2a2fc85
 
 
 def setup_camera():
@@ -214,11 +221,19 @@ def main():
         armature_obj.animation_data.action = action
 
         # extract meta info
+<<<<<<< HEAD
         pose_data, verts, rest_verts, weights, faces, verts_uvs, faces_uvs = process_object()
 
         # boudning box of the action region
         bb_min = rest_verts.reshape(-1, 3).min(axis=0)
         bb_max = rest_verts.reshape(-1, 3).max(axis=0)
+=======
+        pose_data, verts, rest_verts, weights, faces = process_object()
+
+        # boudning box of the action region
+        bb_min = verts.reshape(-1, 3).min(axis=0)
+        bb_max = verts.reshape(-1, 3).max(axis=0)
+>>>>>>> 7b1d01fb72862b24525c88bd6d4f6d04d2a2fc85
         center = (bb_max + bb_min) / 2.0
         scale = (np.prod(bb_max - bb_min)) ** (1. / 3.)
 
@@ -226,7 +241,11 @@ def main():
         anchor, camera = setup_camera()
         # camera.location = [0., 2.0 * scale, 0.]
         camera.location = [0., args.cam_dist * scale, 0.]
+<<<<<<< HEAD
         # anchor.location = center
+=======
+        anchor.location = center
+>>>>>>> 7b1d01fb72862b24525c88bd6d4f6d04d2a2fc85
 
         # rotate the anchor and render
         rotation_eulers = np.concatenate([
@@ -276,8 +295,11 @@ def main():
             verts=verts, 
             rest_verts=rest_verts,
             faces=faces,
+<<<<<<< HEAD
             verts_uvs=verts_uvs, 
             faces_uvs=faces_uvs,
+=======
+>>>>>>> 7b1d01fb72862b24525c88bd6d4f6d04d2a2fc85
             weights=weights,
             **pose_data
         )

@@ -3,11 +3,18 @@
 
 shopt -s expand_aliases
 
+# BLENDER_PKG=\
+# "/home/ruilongli/installation/blender-2.93.0-stable+blender-v293-release.84da05a8b806-linux.x86_64-release/"
+# alias blender="${BLENDER_PKG}/blender"
+
+# BLENDER_PKG_PY="${BLENDER_PKG}/2.93/python/"
+
 BLENDER_PKG=\
 "/Users/ruilongli/Library/Application\ Support/Steam/steamapps/common/Blender/Blender.app"
 alias blender="${BLENDER_PKG}/Contents/MacOS/Blender"
 
 BLENDER_PKG_PY="${BLENDER_PKG}/Contents/Resources/2.93/python/"
+
 alias blender_python="${BLENDER_PKG_PY}/bin/python3.9"
 alias blender_pip="${BLENDER_PKG_PY}/bin/pip3.9"
 
