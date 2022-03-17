@@ -175,6 +175,9 @@ def main():
         save_dir = os.path.join(args.save_dir, obj_name, action_name)
         os.makedirs(save_dir, exist_ok=True)
 
+        if os.path.exists(os.path.join(save_dir, "camera.json")):
+            continue
+
         # apply action
         action = bpy.data.actions[action_name]
         armature_obj = animation.get_armature(index=0)

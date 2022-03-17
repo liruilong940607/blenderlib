@@ -33,12 +33,13 @@ Note `-b` is for running the blender in background mode. Any python arguments ca
 
 Here we render the subject with uniform lighting and disable any shading effects (by using EEVEE engine w/o ambiant occlusion). To render all actions for the subject with multi-threads:
 ```
-# Wolf
+# [Wolf_cub_full_RM_2, Hare_male_full_RM]
+SUBJECT_ID=Hare_male_full_RM
 NUM_THREADS=5
-printf '%s\n' {1..70} | xargs -P$NUM_THREADS -I {} \
+printf '%s\n' {0..100} | xargs -P$NUM_THREADS -I {} \
 bash scripts/run.sh \
     scripts/export_renderings.py \
-    ./data/forest_and_friends/Wolf_cub_full_RM_2.blend \
+    ./data/forest_and_friends/${SUBJECT_ID}.blend \
     --save_dir "./results/" \
     --use_gpu \
     --n_cam 20 \
@@ -47,24 +48,7 @@ bash scripts/run.sh \
 
 bash scripts/run.sh \
     scripts/export_animation.py \
-    ./data/forest_and_friends/Wolf_cub_full_RM_2.blend \
-    --save_dir "./results/"
-
-# Hare
-NUM_THREADS=5
-printf '%s\n' {1..50} | xargs -P$NUM_THREADS -I {} \
-bash scripts/run.sh \
-    pylib/converter.py \
-    ./data/forest_and_friends/Hare_male_full_RM.blend \
-    --save_dir "./results/" \
-    --use_gpu \
-    --n_cam 20 \
-    --cam_dist 3.0 \
-    --action_id {}
-  
-bash scripts/run.sh \
-    scripts/export_animation.py \
-    ./data/forest_and_friends/Hare_male_full_RM.blend \
+    ./data/forest_and_friends/${SUBJECT_ID}.blend \
     --save_dir "./results/"
 ```
 Note: This does not seem to support headless rendering!!
@@ -74,25 +58,13 @@ Note: This does not seem to support headless rendering!!
 
 Through setting the hdri file, it switchs to the Cycles engine with ray tracying to do the rendering. The lighting is more nature and shading effects are enabled. To render all actions for the subject with multi-threads:
 ```
-# Wolf
+# [Wolf_cub_full_RM_2, Hare_male_full_RM]
+SUBJECT_ID=Hare_male_full_RM
 NUM_THREADS=5
 printf '%s\n' {1..70} | xargs -P$NUM_THREADS -I {} \
 bash scripts/run.sh \
     scripts/export_renderings.py \
-    ./data/forest_and_friends/Wolf_cub_full_RM_2.blend \
-    --save_dir "./results/" \
-    --use_gpu \
-    --n_cam 20 \
-    --cam_dist 3.0 \
-    --action_id {} \
-    --hdri_path ./data/hdri/air_museum_playground_4k.hdr
-
-# Hare
-NUM_THREADS=5
-printf '%s\n' {1..50} | xargs -P$NUM_THREADS -I {} \
-bash scripts/run.sh \
-    pylib/converter.py \
-    ./data/forest_and_friends/Hare_male_full_RM.blend \
+    ./data/forest_and_friends/${SUBJECT_ID}.blend \
     --save_dir "./results/" \
     --use_gpu \
     --n_cam 20 \
