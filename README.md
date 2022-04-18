@@ -31,7 +31,7 @@ Note `-b` is for running the blender in background mode. Any python arguments ca
 
 ## Rendering without Shading
 
-Here we render the subject with uniform lighting and disable any shading effects (by using EEVEE engine w/o ambiant occlusion). To render all actions for the subject with multi-threads:
+Here we render the subject with uniform lighting and disable any shading effects (by using EEVEE engine w/o ambiant occlusion). To render all actions for the subject with multi-threads (You might want to adjust the parameter `--cam_dist 3.0` for different subjects):
 ```
 # [Wolf_cub_full_RM_2, Hare_male_full_RM]
 SUBJECT_ID=Hare_male_full_RM
@@ -51,7 +51,8 @@ bash scripts/run.sh \
     ./data/forest_and_friends/${SUBJECT_ID}.blend \
     --save_dir "./results/"
 ```
-Note: This does not seem to support headless rendering!!
+Note: This does not seem to support headless rendering!! (Meaning you can't do it on a remote server)
+
 
 
 ## Rendering with Shading
