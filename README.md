@@ -29,6 +29,11 @@ blender -b --python /tmp/blender_test.py --
 Note `-b` is for running the blender in background mode. Any python arguments can be put after `--` in the end.
 
 
+## Download the blender files
+
+Forest and Friends Dataset [link](https://drive.google.com/drive/folders/19M23Gt2b6ClS4e-7EIfzRhs89TcLJUBn?usp=sharing). Please do not disclose the data to others as it is the property of the lab!
+
+
 ## Rendering without Shading
 
 Here we render the subject with uniform lighting and disable any shading effects (by using EEVEE engine w/o ambiant occlusion). To render all actions for the subject with multi-threads (You might want to adjust the parameter `--cam_dist 3.0` for different subjects):
