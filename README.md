@@ -78,3 +78,26 @@ bash scripts/run.sh \
     --action_id {} \
     --hdri_path ./data/hdri/air_museum_playground_4k.hdr
 ```
+
+
+## Rendering Single view with Camera Trajactory
+
+**WIP**
+
+```
+SUBJECT_ID=Hare_male_full_RM
+bash scripts/run.sh \
+    scripts/export_renderings_sv.py \
+    ./data/forest_and_friends/${SUBJECT_ID}.blend \
+    --save_dir "./results_sv/" \
+    --use_gpu \
+    --cam_dist 3.0 \
+    --hdri_path ./data/hdri/air_museum_playground_4k.hdr
+
+ffmpeg -i results_sv/${SUBJECT_ID}/Idle_2/traj/image%04d.png -c:v libx264 -vf fps=15 -pix_fmt yuv420p results_sv/${SUBJECT_ID}/Idle_2/out.mp4
+
+bash scripts/run.sh \
+    scripts/export_animation.py \
+    ./data/forest_and_friends/${SUBJECT_ID}.blend \
+    --save_dir "./results_sv/"
+```
